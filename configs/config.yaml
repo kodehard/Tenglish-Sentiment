@@ -1,0 +1,36 @@
+model:
+  base_model: "xlm-roberta-base"
+  projection_dim: 256
+  num_classes: 3
+  max_seq_len: 128
+
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.1
+  target_modules: ["query", "value"]
+
+training:
+  epochs: 10
+  batch_size: 32
+  learning_rate: 2.0e-5
+  weight_decay: 0.01
+  warmup_ratio: 0.1
+  scl_weight: 0.5
+  temperature: 0.07
+  seed: 42
+  max_grad_norm: 1.0
+  early_stopping_patience: 3
+
+data:
+  train_split: 0.70
+  val_split: 0.15
+  test_split: 0.15
+  stratify: true
+
+paths:
+  raw_data: "data/raw/codemix_sentiment_data.txt"
+  processed_dir: "data/processed/"
+  checkpoint_dir: "outputs/checkpoints/"
+  log_dir: "outputs/logs/"
+  results_dir: "outputs/results/"

@@ -1,0 +1,24 @@
+2026-04-06 17:43:03,494 — INFO — Device: cpu
+2026-04-06 17:43:03,494 — INFO — Config: {'model': {'base_model': 'xlm-roberta-base', 'projection_dim': 256, 'num_classes': 3, 'max_seq_len': 128}, 'lora': {'r': 16, 'alpha': 32, 'dropout': 0.1, 'target_modules': ['query', 'value']}, 'training': {'epochs': 10, 'batch_size': 32, 'learning_rate': 2e-05, 'weight_decay': 0.01, 'warmup_ratio': 0.1, 'scl_weight': 0.5, 'temperature': 0.07, 'seed': 42, 'max_grad_norm': 1.0, 'early_stopping_patience': 3}, 'data': {'train_split': 0.7, 'val_split': 0.15, 'test_split': 0.15, 'stratify': True}, 'paths': {'raw_data': 'data/raw/codemix_sentiment_data.txt', 'processed_dir': 'data/processed/', 'checkpoint_dir': 'outputs/checkpoints/', 'log_dir': 'outputs/logs/', 'results_dir': 'outputs/results/'}}
+2026-04-06 17:47:53,793 — INFO — Train: 13907 | Val: 2980
+2026-04-06 17:49:19,159 — INFO — Trainable params: 984,323
+2026-04-06 17:49:19,165 — INFO — 
+=== Epoch 1/10 ===
+2026-04-06 17:49:44,585 — INFO — Device: cpu
+2026-04-06 17:49:44,585 — INFO — Config: {'model': {'base_model': 'xlm-roberta-base', 'projection_dim': 256, 'num_classes': 3, 'max_seq_len': 128}, 'lora': {'r': 16, 'alpha': 32, 'dropout': 0.1, 'target_modules': ['query', 'value']}, 'training': {'epochs': 10, 'batch_size': 32, 'learning_rate': 2e-05, 'weight_decay': 0.01, 'warmup_ratio': 0.1, 'scl_weight': 0.5, 'temperature': 0.07, 'seed': 42, 'max_grad_norm': 1.0, 'early_stopping_patience': 3}, 'data': {'train_split': 0.7, 'val_split': 0.15, 'test_split': 0.15, 'stratify': True}, 'paths': {'raw_data': 'data/raw/codemix_sentiment_data.txt', 'processed_dir': 'data/processed/', 'checkpoint_dir': 'outputs/checkpoints/', 'log_dir': 'outputs/logs/', 'results_dir': 'outputs/results/'}}
+2026-04-06 17:49:53,190 — INFO — Train: 13907 | Val: 2980
+2026-04-06 17:49:53,825 — INFO — Trainable params: 984,323
+2026-04-06 17:49:53,827 — INFO — 
+=== Epoch 1/10 ===
+2026-04-06 17:51:05,482 — INFO — Device: cpu
+2026-04-06 17:51:05,482 — INFO — Config: {'model': {'base_model': 'xlm-roberta-base', 'projection_dim': 256, 'num_classes': 3, 'max_seq_len': 128}, 'lora': {'r': 16, 'alpha': 32, 'dropout': 0.1, 'target_modules': ['query', 'value']}, 'training': {'epochs': 10, 'batch_size': 32, 'learning_rate': 2e-05, 'weight_decay': 0.01, 'warmup_ratio': 0.1, 'scl_weight': 0.5, 'temperature': 0.07, 'seed': 42, 'max_grad_norm': 1.0, 'early_stopping_patience': 3}, 'data': {'train_split': 0.7, 'val_split': 0.15, 'test_split': 0.15, 'stratify': True}, 'paths': {'raw_data': 'data/raw/codemix_sentiment_data.txt', 'processed_dir': 'data/processed/', 'checkpoint_dir': 'outputs/checkpoints/', 'log_dir': 'outputs/logs/', 'results_dir': 'outputs/results/'}}
+2026-04-06 17:51:31,759 — INFO — Train: 13907 | Val: 2980
+2026-04-06 17:51:32,401 — INFO — Trainable params: 984,323
+2026-04-06 17:51:32,404 — INFO — 
+=== Epoch 1/10 ===
+2026-04-06 18:04:49,277 — INFO — Device: cpu
+2026-04-06 18:04:49,277 — INFO — Config: {'model': {'base_model': 'xlm-roberta-base', 'projection_dim': 256, 'num_classes': 3, 'max_seq_len': 128}, 'lora': {'r': 16, 'alpha': 32, 'dropout': 0.1, 'target_modules': ['query', 'value']}, 'training': {'epochs': 10, 'batch_size': 32, 'learning_rate': 2e-05, 'weight_decay': 0.01, 'warmup_ratio': 0.1, 'scl_weight': 0.5, 'temperature': 0.07, 'seed': 42, 'max_grad_norm': 1.0, 'early_stopping_patience': 3}, 'data': {'train_split': 0.7, 'val_split': 0.15, 'test_split': 0.15, 'stratify': True}, 'paths': {'raw_data': 'data/raw/codemix_sentiment_data.txt', 'processed_dir': 'data/processed/', 'checkpoint_dir': 'outputs/checkpoints/', 'log_dir': 'outputs/logs/', 'results_dir': 'outputs/results/'}}
+2026-04-06 18:04:55,370 — INFO — Train: 13907 | Val: 2980
+2026-04-06 18:04:56,002 — INFO — Trainable params: 984,323
+2026-04-06 18:04:56,004 — INFO — 
+=== Epoch 1/10 ===
