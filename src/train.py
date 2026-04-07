@@ -23,7 +23,7 @@ from utils import (
     compute_class_weights,
     save_metrics,
 )
-from src.transliterate import transliterate_csv
+from transliterate import transliterate_csv
 
 
 def parse_args():
@@ -44,22 +44,25 @@ def train_epoch(
     device,
     logger,
     max_grad_norm: float = 1.0,
+    accumulation_steps: int = 2,
 ) -> dict[str, float]:
     model.train()
     total_loss, total_scl, total_ce = 0.0, 0.0, 0.0
     correct, total = 0, 0
 
-    pbar = tqdm(dataloader, desc="Training")
-    for batch in pbar:
+    # Ensure gradients are zeroed before we start the loop
+    optimizer.zero_grad()
+    
+    pbar = tqdm(enumerate(dataloader), total=len(dataloader), desc="Training")
+    for step, batch in pbar:
         view1_ids = batch["view1_input_ids"].to(device)
         view1_mask = batch["view1_attention_mask"].to(device)
         view2_ids = batch["view2_input_ids"].to(device)
         view2_mask = batch["view2_attention_mask"].to(device)
         labels = batch["label"].to(device)
 
-        optimizer.zero_grad()
-
-        with autocast(device_type="cpu"):
+        # FIXED: device_type changed from hardcoded "cpu" to dynamic device.type
+        with autocast(device_type=device.type):
             out = model(
                 view1_input_ids=view1_ids,
                 view1_attention_mask=view1_mask,
@@ -72,17 +75,28 @@ def train_epoch(
             z2 = out["z2"]
 
             loss, scl_loss, ce_loss = criterion(z1, z2, labels, logits)
+            
+            # Normalize the loss to account for gradient accumulation
+            loss = loss / accumulation_steps
 
+        # Accumulate the gradients
         scaler.scale(loss).backward()
-        scaler.unscale_(optimizer)
-        torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm)
-        scaler.step(optimizer)
-        scaler.update()
 
-        if scheduler is not None:
-            scheduler.step()
+        # Only update weights when we reach the accumulation target or the end of the data
+        if (step + 1) % accumulation_steps == 0 or (step + 1) == len(dataloader):
+            scaler.unscale_(optimizer)
+            torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=max_grad_norm)
+            scaler.step(optimizer)
+            scaler.update()
+            
+            # Reset gradients only after taking a step
+            optimizer.zero_grad()
 
-        total_loss += loss.item()
+            if scheduler is not None:
+                scheduler.step()
+
+        # Track metrics (multiply loss back by accumulation_steps for accurate reporting)
+        total_loss += (loss.item() * accumulation_steps)
         total_scl += scl_loss.item()
         total_ce += ce_loss.item()
 
@@ -91,7 +105,7 @@ def train_epoch(
         total += labels.size(0)
 
         pbar.set_postfix({
-            "loss": f"{loss.item():.4f}",
+            "loss": f"{(loss.item() * accumulation_steps):.4f}",
             "scl": f"{scl_loss.item():.4f}",
             "ce": f"{ce_loss.item():.4f}",
             "acc": f"{correct / total:.3f}",
@@ -104,7 +118,6 @@ def train_epoch(
         "train_ce": total_ce / n,
         "train_acc": correct / total,
     }
-
 
 @torch.no_grad()
 def evaluate(model, dataloader, criterion, device) -> dict[str, float]:
@@ -119,7 +132,7 @@ def evaluate(model, dataloader, criterion, device) -> dict[str, float]:
         view2_mask = batch["view2_attention_mask"].to(device)
         labels = batch["label"].to(device)
 
-        with autocast(device_type="cpu"):
+        with autocast(device_type=device.type):
             out = model(
                 view1_input_ids=view1_ids,
                 view1_attention_mask=view1_mask,
@@ -234,7 +247,7 @@ def main():
     warmup_steps = int(total_steps * train_cfg["warmup_ratio"])
     scheduler = get_linear_schedule_with_warmup(optimizer, warmup_steps, total_steps)
 
-    scaler = GradScaler("cpu")
+    scaler = GradScaler(device.type)
 
     # --- Training loop ---
     best_f1 = 0.0

@@ -62,19 +62,15 @@ class SupervisedContrastiveLoss(nn.Module):
         logits_max, _ = sim_matrix.max(dim=1, keepdim=True)
         logits = sim_matrix - logits_max  # subtract max for stability
 
-        # Masked logsumexp: only over positive pairs
-        # Set non-positive entries to -inf before exp
         exp_logits = torch.exp(logits)
-        exp_logits = exp_logits * labels_match.float()
-
-        # Denominator: sum of exp(sim) over ALL pairs (positives + negatives)
-        denom = exp_logits.sum(dim=1)  # (2B,)
-
-        # Numerator: exp(sim) for positive pairs only
-        pos_exp = exp_logits  # already masked to positives only
-        # For each i, we want sum over j where labels_match[i,j] is True
-        numerator = pos_exp.sum(dim=1)  # (2B,)
-
+        
+        # Denominator: sum of exp(sim) over ALL pairs (positives + negatives), excluding self
+        mask_no_self = ~torch.eye(2 * batch_size, device=device, dtype=torch.bool)
+        denom = (exp_logits * mask_no_self.float()).sum(dim=1)
+        
+        # Numerator: sum of exp(sim) for positive pairs only (labels_match already excludes self)
+        numerator = (exp_logits * labels_match.float()).sum(dim=1)
+    
         # Compute per-sample loss: -log(numerator/denom)
         # Add small epsilon to avoid log(0)
         loss_per_sample = -torch.log(numerator / (denom + 1e-8) + 1e-8)

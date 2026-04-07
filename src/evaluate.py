@@ -25,18 +25,19 @@ LABEL_NAMES = ["positive", "negative", "neutral"]
 
 
 @torch.no_grad()
+@torch.no_grad()
 def predict(model, dataloader, device):
     model.eval()
-    all_preds, all_labels, all_logits = [], [], []
+    all_preds, all_labels, all_probs = [], [], []
 
     for batch in dataloader:
         view1_ids = batch["view1_input_ids"].to(device)
         view1_mask = batch["view1_attention_mask"].to(device)
         view2_ids = batch["view2_input_ids"].to(device)
         view2_mask = batch["view2_attention_mask"].to(device)
-        labels = batch["label"].numpy()
+        labels = batch["label"].cpu().numpy()
 
-        with torch.amp.autocast(device_type="cpu"):
+        with torch.amp.autocast(device_type=device.type):
             out = model(
                 view1_input_ids=view1_ids,
                 view1_attention_mask=view1_mask,
@@ -45,13 +46,14 @@ def predict(model, dataloader, device):
             )
             logits = out["logits"]
 
-        preds = logits.argmax(dim=1).cpu().numpy()
+        probs = torch.softmax(logits, dim=1)
+        preds = probs.argmax(dim=1).cpu().numpy()
+
         all_preds.extend(preds)
         all_labels.extend(labels)
-        all_logits.append(logits.cpu().numpy())
+        all_probs.append(probs.cpu().numpy())
 
-    return np.array(all_preds), np.array(all_labels), np.vstack(all_logits)
-
+    return np.array(all_preds), np.array(all_labels), np.vstack(all_probs)
 
 def plot_confusion_matrix(y_true, y_pred, label_names, save_path):
     cm = confusion_matrix(y_true, y_pred)
