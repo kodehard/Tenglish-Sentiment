@@ -28,11 +28,12 @@ pip install -r requirements.txt
 
 # 2. Evaluate the lightweight checkpoint on the test set
 python src/evaluate.py --checkpoint outputs/checkpoints/best_model_lora_only.pt
+```
 
-
-🛠️ Full Training Pipeline
+## 🛠️ Full Training Pipeline
 If you wish to replicate the entire data preparation and training process from scratch:
 
+``` bash
 # 1. Download raw CMTET dataset
 bash data/download_data.sh
 
@@ -44,7 +45,7 @@ python src/train.py --config configs/config.yaml
 
 # 4. (Optional) Compress checkpoint for submission
 python shrink_checkpoint.py
-
+```
 
 📊 Results
 The dual-view SCL approach successfully outperforms baseline fine-tuning. The current metrics on the hold-out test set are:
