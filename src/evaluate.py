@@ -76,7 +76,7 @@ def plot_confusion_matrix(y_true, y_pred, label_names, save_path):
 
 def main():
     parser = argparse.ArgumentParser(description="Evaluate Tenglish sentiment model")
-    parser.add_argument("--checkpoint", type=str, default="outputs/checkpoints/best_model.pt")
+    parser.add_argument("--checkpoint", type=str, default="outputs/checkpoints/best_model_lora_only.pt")
     parser.add_argument("--test_csv", type=str, default="data/processed/test.csv")
     parser.add_argument("--config", type=str, default="configs/config.yaml")
     parser.add_argument("--output_dir", type=str, default="outputs/results")

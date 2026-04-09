@@ -65,6 +65,7 @@ def save_checkpoint(
     torch.save(checkpoint, path)
 
 
+
 def load_checkpoint(
     model: torch.nn.Module,
     optimizer: Optional[Optimizer],
@@ -73,7 +74,10 @@ def load_checkpoint(
 ) -> dict:
     """Load a training checkpoint. Returns checkpoint metadata."""
     checkpoint = torch.load(checkpoint_path, map_location="cpu")
-    model.load_state_dict(checkpoint["model_state_dict"])
+    
+    # UPDATE HERE: Add strict=False to ignore the missing base model weights
+    model.load_state_dict(checkpoint["model_state_dict"], strict=False)
+    
     if optimizer is not None and "optimizer_state_dict" in checkpoint:
         optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
     if scheduler is not None and "scheduler_state_dict" in checkpoint:
