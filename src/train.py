@@ -61,8 +61,10 @@ def train_epoch(
         view2_mask = batch["view2_attention_mask"].to(device)
         labels = batch["label"].to(device)
 
-        # FIXED: device_type changed from hardcoded "cpu" to dynamic device.type
-        with autocast(device_type=device.type):
+        # PyTorch autocast only supports "cuda" and "cpu" (MPS is not supported yet)
+        autocast_device = "cuda" if device.type == "cuda" else "cpu"
+        
+        with autocast(device_type=autocast_device):
             out = model(
                 view1_input_ids=view1_ids,
                 view1_attention_mask=view1_mask,
@@ -125,6 +127,8 @@ def evaluate(model, dataloader, criterion, device) -> dict[str, float]:
     total_loss, total_scl, total_ce = 0.0, 0.0, 0.0
     correct, total = 0, 0
 
+    autocast_device = "cuda" if device.type == "cuda" else "cpu"
+
     for batch in dataloader:
         view1_ids = batch["view1_input_ids"].to(device)
         view1_mask = batch["view1_attention_mask"].to(device)
@@ -132,7 +136,7 @@ def evaluate(model, dataloader, criterion, device) -> dict[str, float]:
         view2_mask = batch["view2_attention_mask"].to(device)
         labels = batch["label"].to(device)
 
-        with autocast(device_type=device.type):
+        with autocast(device_type=autocast_device):
             out = model(
                 view1_input_ids=view1_ids,
                 view1_attention_mask=view1_mask,
@@ -176,7 +180,14 @@ def main():
     paths = cfg["paths"]
 
     set_seed(train_cfg["seed"])
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    # Robust Device Selection
+    if torch.cuda.is_available():
+        device = torch.device("cuda")
+    elif torch.backends.mps.is_available():
+        device = torch.device("mps")
+    else:
+        device = torch.device("cpu")
 
     logger = setup_logging(paths["log_dir"])
     logger.info(f"Device: {device}")
@@ -247,7 +258,9 @@ def main():
     warmup_steps = int(total_steps * train_cfg["warmup_ratio"])
     scheduler = get_linear_schedule_with_warmup(optimizer, warmup_steps, total_steps)
 
-    scaler = GradScaler(device.type)
+    # Initialize GradScaler. Use fallback if device is MPS.
+    autocast_device = "cuda" if device.type == "cuda" else "cpu"
+    scaler = GradScaler(autocast_device)
 
     # --- Training loop ---
     best_f1 = 0.0
@@ -307,4 +320,3 @@ def main():
 
 if __name__ == "__main__":
     main()
- 
