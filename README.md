@@ -1,55 +1,46 @@
 # Tenglish Sentiment Analysis
 
-**Parameter-Efficient Contrastive Learning for Code-Mixed Telugu-English Sentiment Classification**
-
-*M.Tech Deep Learning Project @ IITM*
-
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+**Parameter-Efficient Contrastive Learning for Code-Mixed Telugu-English Sentiment Analysis**
 
 ---
 
 ## Overview
 
-A dual-view sentiment classification system for code-mixed Telugu-English (Tenglish) text using **Supervised Contrastive Learning (SCL)** and **LoRA** parameter-efficient fine-tuning.
+This project builds a highly optimized sentiment classification system for code-mixed Telugu-English (Tenglish) text. Instead of a standard classification pipeline, this repository implements a dual-view architecture using:
 
-| Model | Trainable Params | Accuracy | Macro F1 |
-|-------|-----------------|----------|----------|
-| XLM-R Full Fine-tune (Baseline) | ~278M | ~72.0% | ~70.0% |
-| XLM-R + LoRA + CE | ~394K | ~74.0% | ~72.0% |
-| **XLM-R + LoRA + SCL + CE (Ours)** | **~394K** | **81.38%** | **79.97%** |
+- **XLM-RoBERTa** (base) as the shared transformer backbone.
+- **LoRA** (Low-Rank Adaptation) for parameter-efficient fine-tuning (only ~394k trainable parameters).
+- **Supervised Contrastive Learning (SCL)** to mathematically align the embedding spaces of phonetic Roman and native Telugu scripts.
+- **IndicXlit** for programmatic Roman → Telugu transliteration to create the dual-view data.
+
+### ✨ Key Engineering Features
+* **Hardware Optimized:** Seamlessly supports CUDA, CPU, and Apple Silicon (`mps`) with PyTorch mixed-precision (`autocast`) for accelerated training.
+* **Execution Robustness:** Built using `pathlib` absolute path resolution. Scripts can be executed securely from any directory without throwing path or missing file errors.
+* **Lightweight Submission:** The evaluation pipeline maps a tiny 2MB LoRA checkpoint onto the dynamically downloaded HF base model, negating the need to transfer gigabytes of weights.
 
 ---
 
-## Quick Start
+## 🚀 Interactive Inference (New)
 
-### Prerequisites
+You can test the model interactively directly from your terminal. The inference script features color-coded outputs, automatic transliteration, and confidence scoring.
 
 ```bash
+# 1. Install dependencies
 pip install -r requirements.txt
-```
 
-### Evaluate Pretrained Model
-
-```bash
-python src/evaluate.py
-```
-
-### Interactive Inference
-
-Test custom Tenglish sentences:
-
-```bash
-# Interactive mode
+# 2. Launch the interactive CLI
 python src/inference.py
 
-# Batch mode
-python src/inference.py -s "movie chala bagundi" -s "acting nachaledu"
+# Or run batch predictions directly:
+python src/inference.py --sentence "movie chala bagundi bro" --sentence "acting assalu nachaledu"
 ```
 
+## **Quick Evaluation (For Graders)**
+```bash
+# Evaluate the lightweight checkpoint on the hold-out test set
+python src/evaluate.py --checkpoint outputs/checkpoints/best_model_lora_only.pt
 **Commands:** `quit`/`exit` to stop, `clear` to clear screen.
-
+```
 ---
 
 ## Training Pipeline
@@ -107,26 +98,23 @@ SCL Loss              Classifier
 ```
 tenglish-sentiment/
 ├── src/
-│   ├── inference.py        # Interactive sentiment prediction
-│   ├── evaluate.py         # Test set evaluation
-│   ├── train.py            # Training loop with mixed precision
-│   ├── model.py            # XLM-R + LoRA + projection heads
-│   ├── losses.py           # SCL + CrossEntropy loss
-│   ├── dataset.py          # Dual-view PyTorch Dataset
-│   ├── transliterate.py    # Roman → Telugu transliteration
-│   ├── prepare_data.py     # Data preprocessing pipeline
-│   └── utils.py            # Checkpointing, scheduling, logging
-├── configs/
-│   └── config.yaml         # Hyperparameters and paths
+│   ├── transliterate.py    # IndicXlit Roman → Telugu script wrapper
+│   ├── dataset.py          # TenglishDataset (dual-view PyTorch loader)
+│   ├── model.py            # XLM-R + LoRA + projection heads + classifier
+│   ├── losses.py           # Supervised Contrastive Loss (NT-Xent) + Combined Loss
+│   ├── train.py            # Main training loop with mixed precision
+│   ├── evaluate.py         # Inference, LoRA merging, and metrics
+│   ├── inference.py        # Interactive CLI for custom predictions
+│   ├── shrink_checkpoint.py# Utility to strip frozen weights
+│   └── utils.py            # Checkpointing, scheduling, and class weight helpers
+├── notebooks/              # EDA, Transliteration, Training Curves, and Error Analysis
+├── configs/config.yaml     # Hyperparameters and absolute path configurations
 ├── data/
 │   ├── raw/                # Raw CMTET dataset
-│   └── processed/          # Train/val/test CSV splits
-├── outputs/
-│   ├── checkpoints/        # Model weights
-│   ├── logs/               # Training logs
-│   └── results/            # Metrics and visualizations
-├── notebooks/              # EDA, training curves, error analysis
-└── requirements.txt        # Python dependencies
+│   └── processed/          # train.csv, val.csv, test.csv
+└── outputs/
+    ├── checkpoints/        # best_model_lora_only.pt (Submission weight file)
+    └── results/            # metrics.json, confusion_matrix.png
 ```
 
 ---
