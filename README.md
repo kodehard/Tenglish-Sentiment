@@ -1,64 +1,81 @@
 # Tenglish Sentiment Analysis
 
-**Parameter-Efficient Contrastive Learning for Code-Mixed Telugu-English Sentiment Analysis**
-*M.Tech Deep Learning @ IITM*
+**Parameter-Efficient Contrastive Learning for Code-Mixed Telugu-English Sentiment Classification**
+
+*M.Tech Deep Learning Project @ IITM*
+
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-red.svg)](https://pytorch.org)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 ---
 
 ## Overview
 
-This project builds a highly optimized sentiment classification system for code-mixed Telugu-English (Tenglish) text. Instead of a standard classification pipeline, this repository implements a dual-view architecture using:
+A dual-view sentiment classification system for code-mixed Telugu-English (Tenglish) text using **Supervised Contrastive Learning (SCL)** and **LoRA** parameter-efficient fine-tuning.
 
-- **XLM-RoBERTa** (base) as the shared transformer backbone.
-- **LoRA** (Low-Rank Adaptation) for parameter-efficient fine-tuning (only ~394k trainable parameters).
-- **Supervised Contrastive Learning (SCL)** to mathematically align the embedding spaces of Roman and Telugu scripts.
-- **IndicXlit** for programmatic Roman → Telugu transliteration to create the dual-view data.
+| Model | Trainable Params | Accuracy | Macro F1 |
+|-------|-----------------|----------|----------|
+| XLM-R Full Fine-tune (Baseline) | ~278M | ~72.0% | ~70.0% |
+| XLM-R + LoRA + CE | ~394K | ~74.0% | ~72.0% |
+| **XLM-R + LoRA + SCL + CE (Ours)** | **~394K** | **81.38%** | **79.97%** |
 
 ---
 
-## 🚀 Quick Evaluation (For Graders)
+## Quick Start
 
-You can verify the model's performance **without retraining** or downloading massive checkpoint files. The project uses a lightweight LoRA parameter extraction strategy (`best_model_lora_only.pt`, ~2MB) which seamlessly maps onto the frozen Hugging Face XLM-RoBERTa base model at runtime.
-
-*Note: The codebase uses absolute path resolution via `pathlib`, meaning you can safely execute these commands from any directory.*
+### Prerequisites
 
 ```bash
-# 1. Install dependencies
 pip install -r requirements.txt
-
-# 2. Evaluate the lightweight checkpoint on the test set
-python src/evaluate.py --checkpoint outputs/checkpoints/best_model_lora_only.pt
 ```
 
-## 🛠️ Full Training Pipeline
-If you wish to replicate the entire data preparation and training process from scratch:
+### Evaluate Pretrained Model
 
-``` bash
+```bash
+python src/evaluate.py
+```
+
+### Interactive Inference
+
+Test custom Tenglish sentences:
+
+```bash
+# Interactive mode
+python src/inference.py
+
+# Batch mode
+python src/inference.py -s "movie chala bagundi" -s "acting nachaledu"
+```
+
+**Commands:** `quit`/`exit` to stop, `clear` to clear screen.
+
+---
+
+## Training Pipeline
+
+```bash
 # 1. Download raw CMTET dataset
 bash data/download_data.sh
 
-# 2. Prepare data (Parses raw txt → Transliterates → Stratified Train/Val/Test splits)
+# 2. Preprocess and create train/val/test splits
 python src/prepare_data.py
 
-# 3. Train the model (Supports CUDA, Apple Silicon/MPS, and CPU)
+# 3. Train the model
 python src/train.py --config configs/config.yaml
 
-# 4. (Optional) Compress checkpoint for submission
-python shrink_checkpoint.py
+# 4. Extract LoRA weights
+python src/shrink_checkpoint.py
 ```
 
-📊 Results
-The dual-view SCL approach successfully outperforms baseline fine-tuning. The current metrics on the hold-out test set are:
+---
 
-Model Configuration	Trainable Params	Accuracy	Macro F1
-XLM-R (Baseline full fine-tune)	~278M	~0.7200	~0.7000
-XLM-R + LoRA + CE	~394k	~0.7400	~0.7200
-XLM-R + LoRA + SCL + CE (Proposed)	~394k	0.8138	0.7997
+## Architecture
 
-
+```
 Input: (Roman Tenglish, Telugu Script)
          │                │
-    XLM-RoBERTa      XLM-RoBERTa      ← Shared frozen backbone + Trainable LoRA adapters
+    XLM-RoBERTa      XLM-RoBERTa      ← Shared frozen backbone + LoRA adapters
          │                │
       [CLS] emb        [CLS] emb
          │                │
@@ -67,36 +84,118 @@ Input: (Roman Tenglish, Telugu Script)
          z1               z2
          └──────┬──────────┘
                 │
-    SCL Loss + Cross-Entropy Loss
-             (λ = 0.5)
+    ┌───────────┴───────────┐
+    │                       │
+SCL Loss              Classifier
+(z1 ↔ z2 alignment)    (z_avg → 3 classes)
+    │                       │
+    └───────────┬───────────┘
+                │
+         Combined Loss = λ·SCL + (1-λ)·CE
+```
 
+**Key Components:**
+- **Backbone:** XLM-RoBERTa base (frozen)
+- **Adaptation:** LoRA (r=16, α=32) on query, key, value, dense layers
+- **Contrastive:** Supervised NT-Xent loss aligns dual-view embeddings
+- **Classification:** Averaged embeddings → 3-way sentiment
 
+---
+
+## Project Structure
+
+```
 tenglish-sentiment/
 ├── src/
-│   ├── transliterate.py    # IndicXlit Roman → Telugu script wrapper
-│   ├── dataset.py          # TenglishDataset (dual-view PyTorch loader)
-│   ├── model.py            # XLM-R + LoRA + projection heads + classifier
-│   ├── losses.py           # Supervised Contrastive Loss (NT-Xent) + Combined Loss
-│   ├── train.py            # Main training loop with mixed precision
-│   ├── evaluate.py         # Inference, LoRA merging, and metrics
-│   └── utils.py            # Checkpointing, scheduling, and class weight helpers
-├── configs/config.yaml     # Hyperparameters and path configurations
+│   ├── inference.py        # Interactive sentiment prediction
+│   ├── evaluate.py         # Test set evaluation
+│   ├── train.py            # Training loop with mixed precision
+│   ├── model.py            # XLM-R + LoRA + projection heads
+│   ├── losses.py           # SCL + CrossEntropy loss
+│   ├── dataset.py          # Dual-view PyTorch Dataset
+│   ├── transliterate.py    # Roman → Telugu transliteration
+│   ├── prepare_data.py     # Data preprocessing pipeline
+│   └── utils.py            # Checkpointing, scheduling, logging
+├── configs/
+│   └── config.yaml         # Hyperparameters and paths
 ├── data/
 │   ├── raw/                # Raw CMTET dataset
-│   └── processed/          # train.csv, val.csv, test.csv
+│   └── processed/          # Train/val/test CSV splits
 ├── outputs/
-│   ├── checkpoints/        # best_model_lora_only.pt (Submission weight file)
-│   └── results/            # metrics.json, confusion_matrix.png
-└── shrink_checkpoint.py    # Utility to strip frozen weights for academic submission
+│   ├── checkpoints/        # Model weights
+│   ├── logs/               # Training logs
+│   └── results/            # Metrics and visualizations
+├── notebooks/              # EDA, training curves, error analysis
+└── requirements.txt        # Python dependencies
+```
 
+---
 
-Key References
-Conneau et al. (2020) — Unsupervised Cross-lingual Representation Learning at Scale (XLM-RoBERTa)
+## Dataset
 
-Hu et al. (2022) — LoRA: Low-Rank Adaptation of Large Language Models
+The **CMTET (Code-Mixed Telugu-English)** dataset contains ~19,869 sentences labeled for sentiment:
 
-Khosla et al. (2020) — Supervised Contrastive Learning
+| Split | Samples | Percentage |
+|-------|---------|------------|
+| Train | 13,907  | 70% |
+| Val   | 2,980   | 15% |
+| Test  | 2,981   | 15% |
 
-AI4Bharat IndicXlit — Aksharantar transliteration library
+**Label Distribution:** Positive, Negative, Neutral (imbalanced)
 
-CMTET dataset — https://github.com/ksubbu199/cmtet-sentiment
+---
+
+## Configuration
+
+Edit `configs/config.yaml` to modify:
+
+```yaml
+model:
+  base_model: "xlm-roberta-base"
+  projection_dim: 256
+  max_seq_len: 128
+
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.2
+  target_modules: ["query", "key", "value", "dense"]
+
+training:
+  epochs: 30
+  batch_size: 32
+  learning_rate: 1.0e-4
+  scl_weight: 0.5        # λ: SCL loss weight
+  temperature: 0.1       # τ: Contrastive temperature
+  early_stopping_patience: 3
+```
+
+---
+
+## Results
+
+**Test Set Performance:**
+
+| Metric | Value |
+|--------|-------|
+| Accuracy | 81.38% |
+| Macro F1 | 79.97% |
+| Positive F1 | 84.35% |
+| Negative F1 | 86.11% |
+| Neutral F1 | 69.46% |
+
+---
+
+## References
+
+1. Conneau et al. (2020). *Unsupervised Cross-lingual Representation Learning at Scale*. XLM-RoBERTa.
+2. Hu et al. (2022). *LoRA: Low-Rank Adaptation of Large Language Models*.
+3. Khosla et al. (2020). *Supervised Contrastive Learning*.
+4. AI4Bharat. *IndicXlit Transliteration*.
+5. CMTET Dataset: https://github.com/ksubbu199/cmtet-sentiment
+
+---
+
+## License
+
+MIT License
